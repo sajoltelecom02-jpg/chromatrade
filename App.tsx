@@ -10,6 +10,8 @@ import WheelGame from './components/WheelGame';
 import AdminPanel from './components/Admin/AdminPanel';
 import UserProfile from './components/UserProfile';
 
+import WalletView from './components/WalletView';
+
 // --- Icons (SVG) ---
 const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const WalletIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
@@ -27,9 +29,14 @@ export default function App() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
 
   // Auth State
+  const [isRegistering, setIsRegistering] = useState(false);
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState(''); // Acts as password
+  const [confirmOtp, setConfirmOtp] = useState('');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Load initial data
   const refreshGlobalData = useCallback(() => {
@@ -53,16 +60,28 @@ export default function App() {
       return () => clearInterval(interval);
   }, [refreshGlobalData]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAuthError(null);
     try {
-      const u = await MockAuthService.login(phone, otp);
-      setUser(u);
-      setView('GAME');
-      refreshGlobalData();
+      if (isRegistering) {
+          if (otp !== confirmOtp) throw new Error("Passwords do not match");
+          if (!name || !username || !phone || !otp) throw new Error("All fields are required");
+          
+          const u = await MockAuthService.register(phone, otp, name, username);
+          setUser(u);
+          setView('GAME');
+          refreshGlobalData();
+          alert("Registration Successful!");
+      } else {
+          const u = await MockAuthService.login(phone, otp);
+          setUser(u);
+          setView('GAME');
+          refreshGlobalData();
+      }
     } catch (err: any) {
-      alert(err.message || "Login failed");
+      setAuthError(err.message || "Authentication failed");
     }
     setLoading(false);
   };
@@ -108,17 +127,50 @@ export default function App() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
         <div className="bg-slate-800 p-8 rounded-2xl w-full max-w-sm border border-slate-700 shadow-2xl">
           <h1 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-500 mb-2">ChromaTrade</h1>
-          <p className="text-slate-400 text-center mb-8">Next-Gen Prediction Platform</p>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <p className="text-slate-400 text-center mb-6">Next-Gen Prediction Platform</p>
+          
+          {authError && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-500 text-sm py-2 px-4 rounded-xl mb-6 text-center animate-shake">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            {isRegistering && (
+                <>
+                    <div>
+                      <label className="text-slate-400 text-sm">Full Name</label>
+                      <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="John Doe" />
+                    </div>
+                    <div>
+                      <label className="text-slate-400 text-sm">Username</label>
+                      <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="johndoe123" />
+                    </div>
+                </>
+            )}
             <div>
               <label className="text-slate-400 text-sm">Mobile Number</label>
               <input type="text" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="Enter Mobile Number" />
             </div>
             <div>
-              <label className="text-slate-400 text-sm">OTP (or Password)</label>
-              <input type="password" value={otp} onChange={e => setOtp(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="••••" />
+              <label className="text-slate-400 text-sm">Password</label>
+              <input type="password" value={otp} onChange={e => setOtp(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="••••••" />
             </div>
-            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-black font-bold py-3 rounded-xl hover:from-amber-400 hover:to-orange-500 transition shadow-lg">{loading ? 'Authenticating...' : 'Login Securely'}</button>
+            {isRegistering && (
+                <div>
+                  <label className="text-slate-400 text-sm">Confirm Password</label>
+                  <input type="password" value={confirmOtp} onChange={e => setConfirmOtp(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition" placeholder="••••••" />
+                </div>
+            )}
+            <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-amber-500 to-orange-600 text-black font-bold py-3 rounded-xl hover:from-amber-400 hover:to-orange-500 transition shadow-lg">
+                {loading ? 'Processing...' : (isRegistering ? 'Register' : 'Login Securely')}
+            </button>
+            
+            <div className="text-center mt-4">
+                <button type="button" onClick={() => setIsRegistering(!isRegistering)} className="text-amber-500 hover:text-amber-400 text-sm font-medium">
+                    {isRegistering ? 'Already have an account? Login' : 'Don\'t have an account? Register'}
+                </button>
+            </div>
           </form>
         </div>
       </div>
@@ -229,42 +281,64 @@ export default function App() {
 
                       {/* Aviator Card */}
                       <button onClick={() => setActiveGame('aviator')} className="relative group overflow-hidden bg-slate-800 rounded-2xl p-0.5 border border-slate-700 shadow-xl hover:shadow-red-500/20 transition-all active:scale-95 duration-300">
-                          <div className="absolute inset-0 bg-gradient-to-r from-red-600/40 via-transparent to-red-500/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"></div>
+                          {/* Animated Background Gradient */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-red-900/40 via-slate-900 to-slate-900 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                           
-                          <div className="relative bg-slate-900/90 rounded-[14px] p-4 h-full flex items-center gap-6 backdrop-blur-sm overflow-hidden">
-                              {/* Background Effects */}
-                              <div className="absolute left-0 bottom-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-red-900/10 via-slate-900/0 to-slate-900/0"></div>
-                              <div className="absolute top-2 right-10 w-1 h-1 bg-white rounded-full animate-[ping_3s_linear_infinite]"></div>
-                              <div className="absolute bottom-10 left-20 w-1 h-1 bg-white rounded-full animate-[ping_5s_linear_infinite]"></div>
-
+                          <div className="relative bg-slate-900/90 rounded-[14px] p-4 h-full flex items-center gap-4 backdrop-blur-sm overflow-hidden">
+                              
+                              {/* Moving Grid/Terrain Effect */}
+                              <div className="absolute bottom-0 left-0 right-0 h-12 bg-[linear-gradient(transparent_0%,rgba(239,68,68,0.05)_100%)] transform skew-x-12 origin-bottom-left"></div>
+                              
                               {/* Icon Container */}
-                              <div className="w-24 h-24 relative flex-shrink-0 group-hover:scale-110 transition-transform duration-500">
-                                  {/* Plane Trail */}
-                                  <svg className="absolute inset-0 w-full h-full drop-shadow-xl" viewBox="0 0 100 100">
-                                      <path d="M10,80 Q40,80 80,30" fill="none" stroke="#ef4444" strokeWidth="2" strokeDasharray="4 4" className="opacity-50 group-hover:opacity-100 transition-opacity" />
+                              <div className="w-24 h-24 relative flex-shrink-0">
+                                  {/* Curve Path */}
+                                  <svg className="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100">
+                                      <path 
+                                          d="M-10,90 Q30,90 90,20" 
+                                          fill="none" 
+                                          stroke="#ef4444" 
+                                          strokeWidth="3" 
+                                          strokeLinecap="round"
+                                          className="opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out"
+                                          style={{ strokeDasharray: 120, strokeDashoffset: 0 }}
+                                      />
+                                      {/* Shadow of curve */}
+                                       <path 
+                                          d="M-10,90 Q30,90 90,20" 
+                                          fill="none" 
+                                          stroke="#ef4444" 
+                                          strokeWidth="8" 
+                                          className="opacity-0 group-hover:opacity-20 blur-md transition-all duration-700"
+                                      />
                                   </svg>
-                                  
-                                  {/* Animated Plane */}
-                                  <div className="absolute inset-0 animate-[bounce_2s_infinite]">
-                                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)] transform -rotate-12 group-hover:translate-x-4 group-hover:-translate-y-4 transition-transform duration-700">
-                                        <path d="M21 14l-6.2-2.1L12 3H9.5l3 8.9L6 14l-2.5-2H2l2.5 5 16.5-3z" fill="#ef4444" stroke="#fca5a5" strokeWidth="0.5"/>
-                                        <path d="M21 14l-2 3-17-3 2.5-5L6 14l6.5-2.1L9.5 3H12l2.8 8.9L21 14z" fill="url(#planeGrad)" opacity="0.5"/>
-                                        <defs>
-                                            <linearGradient id="planeGrad" x1="0" y1="0" x2="1" y2="1">
-                                                <stop offset="0%" stopColor="#fff" stopOpacity="0.4"/>
-                                                <stop offset="100%" stopColor="#fff" stopOpacity="0"/>
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
+
+                                  {/* The Plane */}
+                                  <div className="absolute inset-0 flex items-center justify-center group-hover:translate-x-4 group-hover:-translate-y-4 transition-transform duration-700 ease-out">
+                                      <div className="w-16 h-16 relative animate-float">
+                                          <svg viewBox="0 0 50 50" className="w-full h-full drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)] transform -rotate-12 group-hover:-rotate-45 transition-transform duration-700">
+                                               {/* Plane Body */}
+                                               <path d="M10,35 L40,25 L45,15 L15,25 Z" fill="#ef4444" />
+                                               <path d="M15,25 L20,15 L30,18 Z" fill="#fca5a5" /> {/* Top Wing */}
+                                               <path d="M20,32 L25,42 L35,38 Z" fill="#b91c1c" /> {/* Bottom Wing */}
+                                               <path d="M40,25 L45,15 L42,28 Z" fill="#7f1d1d" /> {/* Tail Shadow */}
+                                               {/* Propeller Blur */}
+                                               <circle cx="45" cy="15" r="8" fill="white" opacity="0.1" className="animate-ping" />
+                                          </svg>
+                                      </div>
                                   </div>
                               </div>
 
                               <div className="text-left z-10 flex-1">
-                                  <h4 className="font-bold text-white text-xl tracking-wide group-hover:text-red-400 transition-colors drop-shadow-md">Aviator</h4>
-                                  <p className="text-xs text-slate-400 uppercase tracking-wider group-hover:text-slate-300 flex items-center gap-1">
-                                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> 
-                                     Live
-                                  </p>
+                                  <h4 className="font-black italic text-white text-2xl tracking-tighter group-hover:text-red-500 transition-colors drop-shadow-lg" style={{ fontFamily: 'Arial, sans-serif' }}>AVIATOR</h4>
+                                  <div className="flex items-center gap-2 mt-1">
+                                      <span className="flex h-2 w-2 relative">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                      </span>
+                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest group-hover:text-white transition-colors">
+                                          Provably Fair
+                                      </p>
+                                  </div>
                               </div>
                           </div>
                       </button>
@@ -334,36 +408,12 @@ export default function App() {
           </>
         )}
 
-        {view === 'WALLET' && (
-          <div className="space-y-6 animate-fade-in">
-             <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 border border-slate-700 shadow-xl relative overflow-hidden">
-                <div className="relative z-10">
-                   <p className="text-slate-400 text-sm">Total Asset</p>
-                   <h2 className="text-4xl font-bold text-white mt-1">${user?.balance.toFixed(2)}</h2>
-                   <div className="flex gap-3 mt-6">
-                      <button onClick={() => setDepositModalOpen(true)} className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-white py-2 rounded-lg font-medium transition active:scale-95 shadow-lg shadow-emerald-500/20">Deposit</button>
-                      <button onClick={() => setWithdrawModalOpen(true)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-medium transition active:scale-95">Withdraw</button>
-                   </div>
-                </div>
-             </div>
-             <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
-               <h3 className="font-bold text-white mb-4">Transaction History</h3>
-               <div className="space-y-3">
-                 {MockWalletService.getTransactions().map(tx => (
-                   <div key={tx.id} className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium capitalize text-white">{tx.type.replace('_', ' ')}</span>
-                        <span className="text-xs text-slate-500">{new Date(tx.timestamp).toLocaleTimeString()}</span>
-                      </div>
-                      <span className={`font-mono font-bold ${tx.status === 'pending' ? 'text-amber-500' : tx.status === 'failed' ? 'text-red-500' : ['deposit','bet_win','admin_adjustment'].includes(tx.type) ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {tx.status === 'pending' ? 'PENDING' : tx.status === 'failed' ? 'FAILED' : `${['deposit','bet_win','admin_adjustment'].includes(tx.type) ? '+' : '-'}${tx.amount}`}
-                      </span>
-                   </div>
-                 ))}
-                 {MockWalletService.getTransactions().length === 0 && <div className="text-center text-slate-500 text-sm py-4">No transactions yet</div>}
-               </div>
-             </div>
-          </div>
+        {view === 'WALLET' && user && (
+          <WalletView 
+            user={user} 
+            onDeposit={() => setDepositModalOpen(true)} 
+            onWithdraw={() => setWithdrawModalOpen(true)} 
+          />
         )}
 
         {view === 'ADMIN' && user?.role === 'ADMIN' && (

@@ -195,42 +195,73 @@ const AviatorGame: React.FC<Props> = ({ balance, onUpdateBalance }) => {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotationDeg * Math.PI / 180);
-      
-      // Draw Fancy Plane
-      ctx.scale(0.8, 0.8);
-      
-      // Trail
+      ctx.scale(0.7, 0.7);
+
+      // Trail Effect
       if (trail) {
         ctx.beginPath();
-        ctx.moveTo(-20, 0);
-        ctx.lineTo(-60, 0);
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.moveTo(-25, 2);
+        ctx.lineTo(-80, 5);
+        ctx.moveTo(-25, -2);
+        ctx.lineTo(-80, -5);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.stroke();
+        
+        // Engine Glow
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#f59e0b';
       }
 
-      // Body
+      // --- SHARP JET DESIGN ---
+
+      // 1. Vertical Stabilizer (Tail)
       ctx.beginPath();
-      ctx.moveTo(20, 0);
-      ctx.quadraticCurveTo(-10, 10, -20, 0);
-      ctx.quadraticCurveTo(-10, -10, 20, 0);
-      ctx.fillStyle = '#ef4444'; // Red
-      ctx.fill();
-      
-      // Wing
-      ctx.beginPath();
-      ctx.moveTo(-5, 0);
-      ctx.lineTo(-15, 15);
-      ctx.lineTo(5, 0);
-      ctx.fillStyle = '#b91c1c'; // Darker Red
+      ctx.moveTo(-20, -5);
+      ctx.lineTo(-35, -25);
+      ctx.lineTo(-10, -5);
+      ctx.fillStyle = '#7f1d1d'; // Darkest Red
       ctx.fill();
 
-      // Cockpit
+      // 2. Far Wing (Left/Top)
       ctx.beginPath();
-      ctx.ellipse(5, -3, 6, 3, 0, 0, Math.PI * 2);
-      ctx.fillStyle = '#cbd5e1'; // Glass
+      ctx.moveTo(5, -2);
+      ctx.lineTo(-15, -20);
+      ctx.lineTo(-5, -2);
+      ctx.fillStyle = '#991b1b';
+      ctx.fill();
+
+      // 3. Main Fuselage (Body)
+      ctx.beginPath();
+      ctx.moveTo(40, 0); // Nose
+      ctx.lineTo(-30, 8); // Rear Bottom
+      ctx.lineTo(-30, -8); // Rear Top
+      ctx.closePath();
+      ctx.fillStyle = '#ef4444'; // Main Red
+      ctx.fill();
+
+      // 4. Cockpit Window
+      ctx.beginPath();
+      ctx.moveTo(15, -4);
+      ctx.lineTo(5, -7);
+      ctx.lineTo(25, -6);
+      ctx.closePath();
+      ctx.fillStyle = '#e2e8f0'; // Light Blue/Grey
+      ctx.fill();
+
+      // 5. Near Wing (Right/Bottom)
+      ctx.beginPath();
+      ctx.moveTo(5, 2);
+      ctx.lineTo(-20, 18);
+      ctx.lineTo(15, 4);
+      ctx.closePath();
+      ctx.fillStyle = '#b91c1c'; // Dark Red
       ctx.fill();
       
+      // Reset Shadow
+      ctx.shadowBlur = 0;
+
       ctx.restore();
   };
 

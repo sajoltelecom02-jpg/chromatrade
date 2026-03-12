@@ -1,0 +1,5 @@
+{
+  "name": "ChromaTrade",
+  "description": "A professional real-time color prediction trading simulation featuring a 3-minute timer, wallet management, and admin controls.",
+  "requestFramePermissions": []
+}
